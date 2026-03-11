@@ -118,7 +118,6 @@ def make_slide(text, font, is_long_text=False):
 def make_ending_slide():
     img = bg_ending.copy()
     draw = ImageDraw.Draw(img)
-    text = "Great Job!\nCompleted."
     
     draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_en_large, fill="white", anchor="mm", align="center", spacing=40)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
