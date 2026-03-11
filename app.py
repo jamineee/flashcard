@@ -135,7 +135,7 @@ except FileNotFoundError:
     )
 
 # 3. 주제 입력 칸 추가
-topic_input = st.text_input("주제를 입력하세요 (예: Day 1. 필수 영단어)")
+topic_input = st.text_input("주제를 입력하세요 -> 꼭 영문으로 작성해야함.")
 
 uploaded = st.file_uploader("Upload CSV", type="csv")
 
