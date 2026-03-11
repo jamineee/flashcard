@@ -9,15 +9,19 @@ WIDTH = 1920
 HEIGHT = 1080
 PAUSE = 0.6
 
-english_font = ImageFont.truetype("font/static/Lexend-Bold.ttf",120)
-korean_font = ImageFont.truetype("font/NotoSansKR-Bold.otf",100)
+font_en = ImageFont.truetype("font/static/Lexend-Bold.ttf",120)
+font_ko = ImageFont.truetype("font/NotoSansKR-Bold.otf",120)
 
 def make_slide(text):
 
     img = Image.new("RGB",(WIDTH,HEIGHT),"white")
     draw = ImageDraw.Draw(img)
 
-    draw.text((WIDTH/2,HEIGHT/2),text,font=font,fill="black",anchor="mm")
+    draw.text((WIDTH/2,HEIGHT/2), word, font=font_en, fill="black",anchor="mm")
+    draw.text((WIDTH/2,HEIGHT/2), ko_meaning, font=font_ko, fill="black",anchor="mm")
+    draw.text(((WIDTH/2,HEIGHT/2), en_meaning, font=font_en, fill="black",anchor="mm")
+    draw.text((WIDTH/2,HEIGHT/2), example, font=font_en, fill="black",anchor="mm")
+    draw.text((WIDTH/2,HEIGHT/2), example_ko, font=font_ko, fill="black",anchor="mm")
 
     tmp = tempfile.NamedTemporaryFile(delete=False,suffix=".png")
     img.save(tmp.name)
