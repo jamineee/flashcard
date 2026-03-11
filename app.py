@@ -19,7 +19,7 @@ LINE_SPACING_RATIO = 1.2
 # --- 폰트 고정 로드 ---
 try:
     font_en_large = ImageFont.truetype("font/static/Lexend-Bold.ttf", 120)
-    font_ko_large = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 120)
+    font_ko_large = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 100)
     font_en_small = ImageFont.truetype("font/static/Lexend-Bold.ttf", 90)
     font_ko_small = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 90)
 except OSError:
