@@ -26,8 +26,7 @@ except OSError:
     st.error("폰트 파일을 찾을 수 없습니다. font/static/ 경로를 확인해주세요.")
     st.stop()
 
-# --- 배경 이미지 3종 로드 ---
-# --- 배경 이미지 3종 로드 (Streamlit 캐시 에러 해결) ---
+# --- 배경 이미지 3종 로드 (경로 수정 및 캐시 에러 완벽 해결) ---
 @st.cache_resource
 def load_backgrounds():
     def load_and_resize(path):
@@ -35,17 +34,17 @@ def load_backgrounds():
             img = Image.open(path).convert("RGB")
             return img.resize((WIDTH, HEIGHT))
         except FileNotFoundError:
-            st.error(f"필수 배경 이미지 파일이 없습니다: '{path}'\n프로젝트 폴더에 해당 파일을 넣어주세요.")
+            st.error(f"필수 배경 이미지 파일이 없습니다: '{path}'\n해당 폴더에 파일을 넣어주세요.")
             st.stop() 
             
-    # 이미지를 딕셔너리 형태로 반환합니다.
+    # 이미지를 딕셔너리 형태로 반환합니다. (background 폴더 경로 반영)
     return {
-        "title": load_and_resize("bg_title.png"),
-        "content": load_and_resize("bg_content.png"),
-        "ending": load_and_resize("bg_ending.png")
+        "title": load_and_resize("background/bg_title.png"),
+        "content": load_and_resize("background/bg_content.png"),
+        "ending": load_and_resize("background/bg_ending.png")
     }
 
-# 캐시된 함수를 호출하여 변수에 각각 저장합니다. (재실행 시에도 값이 유지됨)
+# 캐시된 함수를 호출하여 변수에 각각 저장합니다. (재실행 시에도 값 유지됨)
 backgrounds = load_backgrounds()
 bg_title = backgrounds["title"]
 bg_content = backgrounds["content"]
@@ -147,7 +146,6 @@ def make_slide_in_effect(duration):
 
 # --- Streamlit UI ---
 st.title("Vocabulary Video Generator")
-#st.info("준비물: 프로젝트 폴더에 'bg_title.png', 'bg_content.png', 'bg_ending.png' 파일이 있어야 합니다.")
 
 try:
     with open("words.csv", "rb") as f:
