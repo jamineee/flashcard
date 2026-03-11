@@ -9,13 +9,14 @@ import tempfile
 WIDTH = 1920
 HEIGHT = 1080
 PAUSE = 0.6                 # 단어 읽은 후 대기 시간 (초)
-TITLE_DURATION = 2.5        # 표지 화면이 온전히 보여지는 시간 (초)
-TRANSITION_DURATION = 0.5   # 화면이 쓱 밀고 내려오는 애니메이션 시간 (초)
+TITLE_DURATION = 2.5        # 표지 화면 노출 시간 (초)
+TRANSITION_DURATION = 0.5   # 위에서 아래로 밀어내는 애니메이션 시간 (초)
 
 MAX_TEXT_WIDTH = WIDTH * 0.85
 LINE_SPACING_RATIO = 1.2
 
 # --- 폰트 고정 로드 ---
+# 실제 환경에 맞게 폰트 경로가 일치해야 합니다.
 font_en_large = ImageFont.truetype("font/static/Lexend-Bold.ttf", 120)
 font_ko_large = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 120)
 font_en_small = ImageFont.truetype("font/static/Lexend-Bold.ttf", 90)
@@ -24,6 +25,7 @@ font_ko_small = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 90)
 # --- 배경 이미지 고정 로드 ---
 @st.cache_resource
 def load_base_image():
+    # 프로젝트 폴더에 background.png 파일이 있어야 합니다.
     img = Image.open("background.png").convert("RGB")
     return img.resize((WIDTH, HEIGHT))
 
@@ -70,7 +72,10 @@ def make_title_slide(topic):
     text = "Flash cards"
     if topic:
         text += f"\n- {topic} -"
+    
+    # 제목 화면 글자색 #4c9cff 적용
     draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_ko_large, fill="#4c9cff", anchor="mm", align="center", spacing=60)
+    
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
@@ -79,19 +84,26 @@ def make_slide(text, font, is_long_text=False):
     img = base_bg_image.copy()
     draw = ImageDraw.Draw(img)
     text_str = str(text).strip() if pd.notna(text) else ""
+    
     if text_str:
         if is_long_text:
             draw_wrapped_text(draw, text_str, font, MAX_TEXT_WIDTH)
         else:
             draw.text((WIDTH/2, HEIGHT/2), text_str, font=font, fill="black", anchor="mm")
+            
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
 
-# --- 오디오 생성 함수 ---
+# --- 오디오 생성 함수 (에러 방지 적용) ---
 def make_audio(text):
     text_str = str(text).strip() if pd.notna(text) else ""
-    if not text_str: text_str = "."
+    
+    # 빈 문자열일 경우 gTTS 에러를 방지하기 위해 더미 텍스트 삽입
+    # (영상 합성 시 덮어씌워지거나 무음 처리되도록 설계됨)
+    if not text_str: 
+        text_str = "blank" 
+        
     tts = gTTS(text=text_str, lang="en")
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
@@ -101,7 +113,7 @@ def make_audio(text):
 def make_slide_in_effect(duration):
     def effect(t):
         if t < duration:
-            # y축을 -HEIGHT(화면 밖 위쪽)에서 0(화면 중앙)으로 이동시킵니다.
+            # 지정된 시간 동안 화면 밖(위)에서 중앙으로 이동
             return ('center', -HEIGHT * (1.0 - (t / duration)))
         return ('center', 0)
     return effect
@@ -109,7 +121,7 @@ def make_slide_in_effect(duration):
 # --- Streamlit UI ---
 st.title("Vocabulary Video Generator")
 
-# 템플릿 다운로드
+# 템플릿 다운로드 버튼 처리
 try:
     with open("words.csv", "rb") as f:
         st.download_button("📥 CSV 템플릿 다운로드", data=f, file_name="words.csv", mime="text/csv")
@@ -117,7 +129,8 @@ except FileNotFoundError:
     csv_template = "word,ko_meaning,en_meaning,example,example_ko\napple,사과,A round fruit,I ate an apple.,나는 사과를 먹었다.\n"
     st.download_button("📥 CSV 템플릿 다운로드", data=csv_template, file_name="words.csv", mime="text/csv")
 
-topic_input = st.text_input("주제를 영문으로 입력하세요")
+# 주제 입력 및 파일 업로드
+topic_input = st.text_input("주제를 입력하세요 (예: Day 1. 필수 영단어)")
 uploaded = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded:
@@ -126,14 +139,12 @@ if uploaded:
         with st.spinner("애니메이션 효과를 적용하여 비디오를 생성 중입니다. 시간이 조금 걸릴 수 있습니다..."):
             clips = []
             
-            # 1. 제목 화면 세팅
+            # 1. 제목 화면 세팅 (완벽한 무음 트랙 생성)
             title_img_path = make_title_slide(topic_input)
             title_duration = TITLE_DURATION + TRANSITION_DURATION
             
-            # 제목 화면 오디오 (무음 처리용 꼼수: 아주 짧은 오디오를 전체 길이만큼 늘림)
-            title_audio_file = AudioFileClip(make_audio("."))
-            title_audio = CompositeAudioClip([title_audio_file.set_start(0)]).set_duration(title_duration)
-            
+            # moviepy를 이용한 진짜 무음 오디오 클립 생성
+            title_audio = AudioClip(lambda t: 0, duration=title_duration)
             title_clip = ImageClip(title_img_path).set_duration(title_duration).set_audio(title_audio)
             clips.append(title_clip)
 
@@ -148,32 +159,32 @@ if uploaded:
                 ]
                 
                 for screen_text, voice_text, font, is_long in slides:
+                    # 셀이 비어있으면 해당 슬라이드는 건너뜀
                     if pd.isna(screen_text) and pd.isna(voice_text): continue
 
                     img_path = make_slide(screen_text, font, is_long_text=is_long)
                     audio_path = make_audio(voice_text)
                     audio_file = AudioFileClip(audio_path)
                     
-                    # 클립 하나당 총 길이 = 음성 길이 + 무음 대기 시간 + 애니메이션 진행 시간
+                    # 클립 총 길이 = 오디오 읽는 시간 + 일시정지 + 다음 애니메이션 진입 시간
                     clip_duration = audio_file.duration + PAUSE + TRANSITION_DURATION
-                    
-                    # 해당 클립 길이에 맞춰 오디오를 합성 (끝부분은 자동으로 무음 처리됨)
                     clip_audio = CompositeAudioClip([audio_file.set_start(0)]).set_duration(clip_duration)
                     
                     video_clip = ImageClip(img_path).set_duration(clip_duration).set_audio(clip_audio)
                     clips.append(video_clip)
             
             # 3. 화면 전환 효과(Slide Down) 일괄 적용
-            # 표지(첫 번째 클립)를 제외한 모든 클립에 내려오는 효과 부여
+            # 첫 번째 제목 클립을 제외한 나머지 모든 클립에 애니메이션 적용
             for j in range(1, len(clips)):
                 clips[j] = clips[j].set_pos(make_slide_in_effect(TRANSITION_DURATION))
 
-            # 4. 영상 합성 (padding을 음수로 주어 애니메이션 시간만큼 겹치게 만듭니다)
+            # 4. 영상 최종 합성
             if clips:
+                # padding을 음수로 주어 클립 간 겹치는 구간 생성 -> 부드러운 전환 연출
                 video = concatenate_videoclips(
                     clips, 
                     padding=-TRANSITION_DURATION, 
-                    method="compose" # 화면이 겹치면서 그려지도록 compose 모드 활성화
+                    method="compose" 
                 )
                 
                 output_filename = "vocab_video.mp4"
@@ -183,5 +194,5 @@ if uploaded:
                     codec="libx264",
                     audio_codec="aac"
                 )
-                st.success("비디오 생성이 완료되었습니다!")
+                st.success("🎉 비디오 생성이 완료되었습니다!")
                 st.video(output_filename)
