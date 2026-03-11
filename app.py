@@ -9,7 +9,7 @@ WIDTH = 1920
 HEIGHT = 1080
 PAUSE = 0.6
 
-font = ImageFont.truetype("/System/Library/Fonts/AppleSDGothicNeo.ttc",120)
+font = ImageFont.truetype("font/Lexend-Bold.ttf",120)
 
 def make_slide(text):
 
