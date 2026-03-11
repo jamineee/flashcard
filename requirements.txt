@@ -1,8 +1,11 @@
 streamlit
 pandas
-moviepy
+moviepy==1.0.3
 gtts
 pillow
 imageio
 imageio-ffmpeg
 numpy
+proglog
+decorator
+tqdm
