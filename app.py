@@ -9,7 +9,8 @@ WIDTH = 1920
 HEIGHT = 1080
 PAUSE = 0.6
 
-font = ImageFont.truetype("font/static/Lexend-Bold.ttf",120)
+english_font = ImageFont.truetype("font/static/Lexend-Bold.ttf",120)
+korean_font = ImageFont.truetype("font/NotoSansKR-Bold.otf",100)
 
 def make_slide(text):
 
