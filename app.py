@@ -37,14 +37,12 @@ def load_backgrounds():
             st.error(f"필수 배경 이미지 파일이 없습니다: '{path}'\n해당 폴더에 파일을 넣어주세요.")
             st.stop() 
             
-    # 이미지를 딕셔너리 형태로 반환합니다. (background 폴더 경로 반영)
     return {
         "title": load_and_resize("background/bg_title.png"),
         "content": load_and_resize("background/bg_content.png"),
         "ending": load_and_resize("background/bg_ending.png")
     }
 
-# 캐시된 함수를 호출하여 변수에 각각 저장합니다. (재실행 시에도 값 유지됨)
 backgrounds = load_backgrounds()
 bg_title = backgrounds["title"]
 bg_content = backgrounds["content"]
@@ -84,7 +82,7 @@ def draw_wrapped_text(draw, text, font, max_width, fill="black"):
         draw.text((WIDTH/2, current_y), line, font=font, fill=fill, anchor="ma")
         current_y += single_line_height
 
-# --- 1. [표지] 슬라이드 생성 함수 ---
+# --- 1. [표지] 슬라이드 생성 함수 (글씨 나옴) ---
 def make_title_slide(topic):
     img = bg_title.copy()
     draw = ImageDraw.Draw(img)
@@ -92,7 +90,7 @@ def make_title_slide(topic):
     if topic:
         text += f"\n- {topic} -"
     
-    #draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_ko_large, fill="#4c9cff", anchor="mm", align="center", spacing=60)
+    draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_ko_large, fill="#4c9cff", anchor="mm", align="center", spacing=60)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
@@ -114,15 +112,13 @@ def make_slide(text, font, is_long_text=False):
     img.save(tmp.name)
     return tmp.name
 
-# --- 3. [엔딩] 슬라이드 생성 함수 ---
-# --- 3. [엔딩] 슬라이드 생성 함수 ---
+# --- 3. [엔딩] 슬라이드 생성 함수 (글씨 없애고 이미지만 띄움) ---
 def make_ending_slide():
     img = bg_ending.copy()
-    # 글씨 쓰는 부분(draw)을 통째로 지웠습니다.
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
-    
+
 # --- 오디오 생성 함수 ---
 def make_audio(text):
     text_str = str(text).strip() if pd.notna(text) else ""
@@ -204,7 +200,7 @@ if uploaded:
             
             for idx, clip in enumerate(clips):
                 if idx == 0:
-                    # ✅ 첫 번째(표지) 화면에 페이드 인(Fade-in) 효과 추가
+                    # ✅ 첫 번째(표지) 화면에 페이드 인(Fade-in) 효과
                     fadein_clip = clip.fadein(FADEIN_DURATION).set_start(start_time)
                     final_clips.append(fadein_clip)
                     start_time += clip.duration
@@ -216,7 +212,6 @@ if uploaded:
 
             # --- 5. 최종 합성 (CompositeVideoClip) ---
             if final_clips:
-                # 배경색을 검정으로 설정하여 검은 화면에서 서서히 밝아지도록 연출
                 video = CompositeVideoClip(final_clips, size=(WIDTH, HEIGHT), bg_color=(0,0,0))
                 
                 output_filename = "vocab_video.mp4"
