@@ -8,26 +8,45 @@ import tempfile
 # --- 기본 설정 ---
 WIDTH = 1920
 HEIGHT = 1080
-PAUSE = 1.6                 
-TITLE_DURATION = 2.5        
-TRANSITION_DURATION = 0.5   # 위에서 아래로 밀어내는 시간
+PAUSE = 1.5                 
+TITLE_DURATION = 3.0        
+TRANSITION_DURATION = 0.5   
+FADEIN_DURATION = 1.0       # 맨 처음 표지가 서서히 나타나는 시간 (1초)
 
 MAX_TEXT_WIDTH = WIDTH * 0.85
 LINE_SPACING_RATIO = 1.2
 
 # --- 폰트 고정 로드 ---
-font_en_large = ImageFont.truetype("font/static/Lexend-Bold.ttf", 120)
-font_ko_large = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 120)
-font_en_small = ImageFont.truetype("font/static/Lexend-Bold.ttf", 90)
-font_ko_small = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 90)
+try:
+    font_en_large = ImageFont.truetype("font/static/Lexend-Bold.ttf", 120)
+    font_ko_large = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 120)
+    font_en_small = ImageFont.truetype("font/static/Lexend-Bold.ttf", 90)
+    font_ko_small = ImageFont.truetype("font/static/NotoSansKR-Bold.ttf", 90)
+except OSError:
+    st.error("폰트 파일을 찾을 수 없습니다. font/static/ 경로를 확인해주세요.")
+    st.stop()
 
-# --- 배경 이미지 고정 로드 ---
+# --- 배경 이미지 3종 로드 ---
+bg_title = None
+bg_content = None
+bg_ending = None
+
 @st.cache_resource
-def load_base_image():
-    img = Image.open("background.png").convert("RGB")
-    return img.resize((WIDTH, HEIGHT))
+def load_backgrounds():
+    def load_and_resize(path):
+        try:
+            img = Image.open(path).convert("RGB")
+            return img.resize((WIDTH, HEIGHT))
+        except FileNotFoundError:
+            st.error(f"필수 배경 이미지 파일이 없습니다: '{path}'\n프로젝트 폴더에 해당 파일을 넣어주세요.")
+            st.stop() 
+            
+    global bg_title, bg_content, bg_ending
+    bg_title = load_and_resize("bg_title.png")
+    bg_content = load_and_resize("bg_content.png")
+    bg_ending = load_and_resize("bg_ending.png")
 
-base_bg_image = load_base_image()
+load_backgrounds()
 
 # --- 텍스트 줄바꿈 헬퍼 함수 ---
 def draw_wrapped_text(draw, text, font, max_width, fill="black"):
@@ -63,31 +82,43 @@ def draw_wrapped_text(draw, text, font, max_width, fill="black"):
         draw.text((WIDTH/2, current_y), line, font=font, fill=fill, anchor="ma")
         current_y += single_line_height
 
-# --- 슬라이드 이미지 생성 함수 ---
+# --- 1. [표지] 슬라이드 생성 함수 ---
 def make_title_slide(topic):
-    img = base_bg_image.copy()
+    img = bg_title.copy()
     draw = ImageDraw.Draw(img)
     text = "Flash cards"
     if topic:
         text += f"\n- {topic} -"
     
     draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_ko_large, fill="#4c9cff", anchor="mm", align="center", spacing=60)
-    
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
 
+# --- 2. [본문] 슬라이드 생성 함수 ---
 def make_slide(text, font, is_long_text=False):
-    img = base_bg_image.copy()
+    img = bg_content.copy()
     draw = ImageDraw.Draw(img)
     text_str = str(text).strip() if pd.notna(text) else ""
-    
+    text_color = "black" 
+
     if text_str:
         if is_long_text:
-            draw_wrapped_text(draw, text_str, font, MAX_TEXT_WIDTH)
+            draw_wrapped_text(draw, text_str, font, MAX_TEXT_WIDTH, fill=text_color)
         else:
-            draw.text((WIDTH/2, HEIGHT/2), text_str, font=font, fill="black", anchor="mm")
+            draw.text((WIDTH/2, HEIGHT/2), text_str, font=font, fill=text_color, anchor="mm")
             
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    img.save(tmp.name)
+    return tmp.name
+
+# --- 3. [엔딩] 슬라이드 생성 함수 ---
+def make_ending_slide():
+    img = bg_ending.copy()
+    draw = ImageDraw.Draw(img)
+    text = "Great Job!\nCompleted."
+    
+    draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_en_large, fill="white", anchor="mm", align="center", spacing=40)
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
@@ -97,25 +128,23 @@ def make_audio(text):
     text_str = str(text).strip() if pd.notna(text) else ""
     if not text_str: 
         text_str = "blank" 
-        
     tts = gTTS(text=text_str, lang="en")
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
     return tmp.name
 
-# --- 강제 애니메이션 좌표 계산 함수 (버그 픽스) ---
+# --- 애니메이션 좌표 계산 함수 ---
 def make_slide_in_effect(duration):
     def effect(t):
-        # t는 현재 클립의 재생 시간(초)
         if t >= duration:
-            return (0, 0) # 애니메이션이 끝나면 정중앙(0, 0)에 고정
-        # 화면 맨 위(-1080)에서부터 0초~0.5초 동안 서서히 0(중앙)으로 내려옵니다.
+            return (0, 0)
         y_pos = -HEIGHT + (HEIGHT * (t / duration))
         return (0, int(y_pos))
     return effect
 
 # --- Streamlit UI ---
 st.title("Vocabulary Video Generator")
+st.info("준비물: 프로젝트 폴더에 'bg_title.png', 'bg_content.png', 'bg_ending.png' 파일이 있어야 합니다.")
 
 try:
     with open("words.csv", "rb") as f:
@@ -130,17 +159,17 @@ uploaded = st.file_uploader("Upload CSV", type="csv")
 if uploaded:
     df = pd.read_csv(uploaded)
     if st.button("Generate Video"):
-        with st.spinner("프레임 단위로 애니메이션을 합성 중입니다. (시간이 조금 더 걸립니다)..."):
+        with st.spinner("프레임 단위로 애니메이션을 합성 중입니다. (시간이 조금 걸립니다)..."):
             clips = []
             
-            # 1. 제목 화면
+            # --- 1. 표지 화면 추가 ---
             title_img_path = make_title_slide(topic_input)
-            title_duration = TITLE_DURATION + TRANSITION_DURATION
-            title_audio = AudioClip(lambda t: 0, duration=title_duration)
-            title_clip = ImageClip(title_img_path).set_duration(title_duration).set_audio(title_audio)
+            title_total_duration = TITLE_DURATION + TRANSITION_DURATION 
+            title_audio = AudioClip(lambda t: 0, duration=title_total_duration)
+            title_clip = ImageClip(title_img_path).set_duration(title_total_duration).set_audio(title_audio)
             clips.append(title_clip)
 
-            # 2. 본문 화면
+            # --- 2. 본문 화면 루프 ---
             for i, row in df.iterrows():
                 slides = [
                     (row["word"], row["word"], font_en_large, False),
@@ -162,27 +191,34 @@ if uploaded:
                     
                     video_clip = ImageClip(img_path).set_duration(clip_duration).set_audio(clip_audio)
                     clips.append(video_clip)
+
+            # --- 3. 엔딩 화면 추가 ---
+            ending_img_path = make_ending_slide()
+            ending_total_duration = TITLE_DURATION + TRANSITION_DURATION
+            ending_audio = AudioClip(lambda t: 0, duration=ending_total_duration)
+            ending_clip = ImageClip(ending_img_path).set_duration(ending_total_duration).set_audio(ending_audio)
+            clips.append(ending_clip)
             
-            # 3. 타임라인 수동 조립 및 애니메이션 적용 (버그 픽스 핵심 부분)
+            # --- 4. 애니메이션 좌표 계산 및 타임라인 배치 ---
             start_time = 0
             final_clips = []
             
             for idx, clip in enumerate(clips):
                 if idx == 0:
-                    # 첫 번째 표지는 애니메이션 없이 시작
-                    final_clips.append(clip.set_start(start_time))
+                    # ✅ 첫 번째(표지) 화면에 페이드 인(Fade-in) 효과 추가
+                    fadein_clip = clip.fadein(FADEIN_DURATION).set_start(start_time)
+                    final_clips.append(fadein_clip)
                     start_time += clip.duration
                 else:
-                    # 앞 클립이 끝나기 0.5초 전에 다음 클립이 시작되도록 시간 당기기
-                    start_time -= TRANSITION_DURATION
-                    # 위에서 아래로 내려오는 효과 적용 후 타임라인에 배치
+                    start_time -= TRANSITION_DURATION 
                     animated_clip = clip.set_pos(make_slide_in_effect(TRANSITION_DURATION)).set_start(start_time)
                     final_clips.append(animated_clip)
                     start_time += clip.duration
 
-            # 4. 강제 병합 (CompositeVideoClip)
+            # --- 5. 최종 합성 (CompositeVideoClip) ---
             if final_clips:
-                video = CompositeVideoClip(final_clips, size=(WIDTH, HEIGHT))
+                # 배경색을 검정으로 설정하여 검은 화면에서 서서히 밝아지도록 연출
+                video = CompositeVideoClip(final_clips, size=(WIDTH, HEIGHT), bg_color=(0,0,0))
                 
                 output_filename = "vocab_video.mp4"
                 video.write_videofile(
