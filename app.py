@@ -10,7 +10,7 @@ HEIGHT = 1080
 PAUSE = 0.6
 
 font_en = ImageFont.truetype("font/static/Lexend-Bold.ttf",120)
-font_ko = ImageFont.truetype("font/NotoSansKR-Bold.otf",120)
+font_ko = ImageFont.truetype("font/static/NotoSansKR-Bold.otf",120)
 
 def make_slide(text):
 
