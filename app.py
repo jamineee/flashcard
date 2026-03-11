@@ -8,7 +8,7 @@ import tempfile
 # --- 기본 설정 ---
 WIDTH = 1920
 HEIGHT = 1080
-PAUSE = 1.7                 
+PAUSE = 1.6                 
 TITLE_DURATION = 2.5        
 TRANSITION_DURATION = 0.5   # 위에서 아래로 밀어내는 시간
 
