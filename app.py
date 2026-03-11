@@ -144,7 +144,7 @@ def make_slide_in_effect(duration):
 
 # --- Streamlit UI ---
 st.title("Vocabulary Video Generator")
-st.info("준비물: 프로젝트 폴더에 'bg_title.png', 'bg_content.png', 'bg_ending.png' 파일이 있어야 합니다.")
+#st.info("준비물: 프로젝트 폴더에 'bg_title.png', 'bg_content.png', 'bg_ending.png' 파일이 있어야 합니다.")
 
 try:
     with open("words.csv", "rb") as f:
