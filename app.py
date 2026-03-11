@@ -169,7 +169,7 @@ if uploaded:
                 slides = [
                     (row["word"], row["word"], font_en_large, False),
                     (row["ko_meaning"], row["word"], font_ko_large, False),
-                    (row["en_meaning"], row["en_meaning"], font_en_large, False),
+                    (row["en_meaning"], row["en_meaning"], font_en_small, False),
                     (row["example"], row["example"], font_en_small, True),
                     (row["example_ko"], row["example"], font_ko_small, True)
                 ]
