@@ -27,10 +27,7 @@ except OSError:
     st.stop()
 
 # --- 배경 이미지 3종 로드 ---
-bg_title = None
-bg_content = None
-bg_ending = None
-
+# --- 배경 이미지 3종 로드 (Streamlit 캐시 에러 해결) ---
 @st.cache_resource
 def load_backgrounds():
     def load_and_resize(path):
@@ -41,12 +38,18 @@ def load_backgrounds():
             st.error(f"필수 배경 이미지 파일이 없습니다: '{path}'\n프로젝트 폴더에 해당 파일을 넣어주세요.")
             st.stop() 
             
-    global bg_title, bg_content, bg_ending
-    bg_title = load_and_resize("bg_title.png")
-    bg_content = load_and_resize("bg_content.png")
-    bg_ending = load_and_resize("bg_ending.png")
+    # 이미지를 딕셔너리 형태로 반환합니다.
+    return {
+        "title": load_and_resize("bg_title.png"),
+        "content": load_and_resize("bg_content.png"),
+        "ending": load_and_resize("bg_ending.png")
+    }
 
-load_backgrounds()
+# 캐시된 함수를 호출하여 변수에 각각 저장합니다. (재실행 시에도 값이 유지됨)
+backgrounds = load_backgrounds()
+bg_title = backgrounds["title"]
+bg_content = backgrounds["content"]
+bg_ending = backgrounds["ending"]
 
 # --- 텍스트 줄바꿈 헬퍼 함수 ---
 def draw_wrapped_text(draw, text, font, max_width, fill="black"):
