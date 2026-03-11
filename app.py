@@ -115,15 +115,14 @@ def make_slide(text, font, is_long_text=False):
     return tmp.name
 
 # --- 3. [엔딩] 슬라이드 생성 함수 ---
+# --- 3. [엔딩] 슬라이드 생성 함수 ---
 def make_ending_slide():
     img = bg_ending.copy()
-    draw = ImageDraw.Draw(img)
-    
-    draw.multiline_text((WIDTH/2, HEIGHT/2), text, font=font_en_large, fill="white", anchor="mm", align="center", spacing=40)
+    # 글씨 쓰는 부분(draw)을 통째로 지웠습니다.
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     img.save(tmp.name)
     return tmp.name
-
+    
 # --- 오디오 생성 함수 ---
 def make_audio(text):
     text_str = str(text).strip() if pd.notna(text) else ""
