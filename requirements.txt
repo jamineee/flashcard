@@ -1,7 +1,8 @@
 streamlit
 pandas
 moviepy
-gTTS
+gtts
 pillow
 imageio
 imageio-ffmpeg
+numpy
