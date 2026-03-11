@@ -117,7 +117,7 @@ except FileNotFoundError:
     csv_template = "word,ko_meaning,en_meaning,example,example_ko\napple,사과,A round fruit,I ate an apple.,나는 사과를 먹었다.\n"
     st.download_button("📥 CSV 템플릿 다운로드", data=csv_template, file_name="words.csv", mime="text/csv")
 
-topic_input = st.text_input("주제를 입력하세요 (예: Day 1. 필수 영단어)")
+topic_input = st.text_input("주제를 영문으로 입력하세요")
 uploaded = st.file_uploader("Upload CSV", type="csv")
 
 if uploaded:
