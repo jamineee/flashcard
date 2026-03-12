@@ -38,7 +38,7 @@ def load_backgrounds():
             
     return {
         "title": load_and_resize("background/bg_title.png"),
-        "content": load_and_resize("bg_content_new.png"),
+        "content": load_and_resize("bg_content_final.png"),
         "ending": load_and_resize("background/bg_ending.png")
     }
 
