@@ -8,9 +8,8 @@ import tempfile
 # --- 기본 설정 ---
 WIDTH = 1920
 HEIGHT = 1080
-PAUSE = 1.5                 
-TITLE_DURATION = 3.0        
-TRANSITION_DURATION = 0.5   
+PAUSE = 1.5                  
+TITLE_DURATION = 3.0         
 FADEIN_DURATION = 1.0       # 맨 처음 표지가 서서히 나타나는 시간 (1초)
 
 MAX_TEXT_WIDTH = WIDTH * 0.85
@@ -26,7 +25,7 @@ except OSError:
     st.error("폰트 파일을 찾을 수 없습니다. font/static/ 경로를 확인해주세요.")
     st.stop()
 
-# --- 배경 이미지 3종 로드 (경로 수정 및 캐시 에러 완벽 해결) ---
+# --- 배경 이미지 3종 로드 ---
 @st.cache_resource
 def load_backgrounds():
     def load_and_resize(path):
@@ -82,7 +81,7 @@ def draw_wrapped_text(draw, text, font, max_width, fill="black"):
         draw.text((WIDTH/2, current_y), line, font=font, fill=fill, anchor="ma")
         current_y += single_line_height
 
-# --- 1. [표지] 슬라이드 생성 함수 (글씨 나옴) ---
+# --- 1. [표지] 슬라이드 생성 함수 ---
 def make_title_slide(topic):
     img = bg_title.copy()
     draw = ImageDraw.Draw(img)
@@ -112,7 +111,7 @@ def make_slide(text, font, is_long_text=False):
     img.save(tmp.name)
     return tmp.name
 
-# --- 3. [엔딩] 슬라이드 생성 함수 (글씨 없애고 이미지만 띄움) ---
+# --- 3. [엔딩] 슬라이드 생성 함수 ---
 def make_ending_slide():
     img = bg_ending.copy()
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
@@ -128,15 +127,6 @@ def make_audio(text):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
     tts.save(tmp.name)
     return tmp.name
-
-# --- 애니메이션 좌표 계산 함수 ---
-def make_slide_in_effect(duration):
-    def effect(t):
-        if t >= duration:
-            return (0, 0)
-        y_pos = -HEIGHT + (HEIGHT * (t / duration))
-        return (0, int(y_pos))
-    return effect
 
 # --- Streamlit UI ---
 st.title("Vocabulary Video Generator")
@@ -154,14 +144,13 @@ uploaded = st.file_uploader("Upload CSV", type="csv")
 if uploaded:
     df = pd.read_csv(uploaded)
     if st.button("Generate Video"):
-        with st.spinner("프레임 단위로 애니메이션을 합성 중입니다. (시간이 조금 걸립니다)..."):
+        with st.spinner("비디오를 생성 중입니다. (시간이 조금 걸릴 수 있습니다)..."):
             clips = []
             
             # --- 1. 표지 화면 추가 ---
             title_img_path = make_title_slide(topic_input)
-            title_total_duration = TITLE_DURATION + TRANSITION_DURATION 
-            title_audio = AudioClip(lambda t: 0, duration=title_total_duration)
-            title_clip = ImageClip(title_img_path).set_duration(title_total_duration).set_audio(title_audio)
+            title_audio = AudioClip(lambda t: 0, duration=TITLE_DURATION)
+            title_clip = ImageClip(title_img_path).set_duration(TITLE_DURATION).set_audio(title_audio)
             clips.append(title_clip)
 
             # --- 2. 본문 화면 루프 ---
@@ -181,7 +170,7 @@ if uploaded:
                     audio_path = make_audio(voice_text)
                     audio_file = AudioFileClip(audio_path)
                     
-                    clip_duration = audio_file.duration + PAUSE + TRANSITION_DURATION
+                    clip_duration = audio_file.duration + PAUSE
                     clip_audio = CompositeAudioClip([audio_file.set_start(0)]).set_duration(clip_duration)
                     
                     video_clip = ImageClip(img_path).set_duration(clip_duration).set_audio(clip_audio)
@@ -189,28 +178,25 @@ if uploaded:
 
             # --- 3. 엔딩 화면 추가 ---
             ending_img_path = make_ending_slide()
-            ending_total_duration = TITLE_DURATION + TRANSITION_DURATION
-            ending_audio = AudioClip(lambda t: 0, duration=ending_total_duration)
-            ending_clip = ImageClip(ending_img_path).set_duration(ending_total_duration).set_audio(ending_audio)
+            ending_audio = AudioClip(lambda t: 0, duration=TITLE_DURATION)
+            ending_clip = ImageClip(ending_img_path).set_duration(TITLE_DURATION).set_audio(ending_audio)
             clips.append(ending_clip)
             
-            # --- 4. 애니메이션 좌표 계산 및 타임라인 배치 ---
+            # --- 4. 타임라인 조립 (전환 애니메이션 없이 바로 컷 전환) ---
             start_time = 0
             final_clips = []
             
             for idx, clip in enumerate(clips):
                 if idx == 0:
-                    # ✅ 첫 번째(표지) 화면에 페이드 인(Fade-in) 효과
+                    # ✅ 첫 번째(표지) 화면에만 페이드 인(Fade-in) 효과 적용
                     fadein_clip = clip.fadein(FADEIN_DURATION).set_start(start_time)
                     final_clips.append(fadein_clip)
-                    start_time += clip.duration
                 else:
-                    start_time -= TRANSITION_DURATION 
-                    animated_clip = clip.set_pos(make_slide_in_effect(TRANSITION_DURATION)).set_start(start_time)
-                    final_clips.append(animated_clip)
-                    start_time += clip.duration
+                    # 나머지 슬라이드는 겹치지 않고 바로 전환 (Cut)
+                    final_clips.append(clip.set_start(start_time))
+                start_time += clip.duration
 
-            # --- 5. 최종 합성 (CompositeVideoClip) ---
+            # --- 5. 최종 합성 ---
             if final_clips:
                 video = CompositeVideoClip(final_clips, size=(WIDTH, HEIGHT), bg_color=(0,0,0))
                 
